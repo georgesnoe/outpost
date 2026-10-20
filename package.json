@@ -1,13 +1,23 @@
 {
   "name": "outpost",
-  "module": "index.ts",
+  "module": "src/index.ts",
   "type": "module",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
-    "typecheck": "bun check"
+    "start": "bun run src/index.ts",
+    "test": "bun test",
+    "typecheck": "bun check",
+    "format": "prettier --write .",
+    "build": "bun build --production --compile --outfile=outpost --minify ."
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.3.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "prettier": "3.9.10"
   },
   "peerDependencies": {
     "typescript": "^7"
