@@ -1,5 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/server"
 import * as z from "zod"
+import { identify } from "../providers.ts"
+import { audit } from "../log.ts"
 
 const DEFAULT_TIMEOUT = 30_000
 const MAX_TIMEOUT = 600_000
@@ -21,7 +23,12 @@ const description = isWindows
   ? "Run a PowerShell command on the machine hosting this server and return its output."
   : "Run a Bash command on the machine hosting this server and return its output."
 
-export function registerExecTool(server: McpServer) {
+export type ExecContext = {
+  /** Address of the client that issued the call, when known. */
+  ip: string | null
+}
+
+export function registerExecTool(server: McpServer, context?: ExecContext) {
   server.registerTool(
     "exec",
     {
@@ -53,38 +60,75 @@ export function registerExecTool(server: McpServer) {
       }
     },
     async ({ command, cwd, timeout }) => {
-      const proc = Bun.spawn([shell, ...shellArgs, command], {
-        cwd: cwd ?? process.cwd(),
-        stdout: "pipe",
-        stderr: "pipe",
-        env: { ...process.env, NO_COLOR: "1" }
-      })
+      const identity = identify(context?.ip)
+      const startedAt = Date.now()
+      const workdir = cwd ?? process.cwd()
 
-      let timedOut = false
-      const timer = setTimeout(() => {
-        timedOut = true
-        proc.kill()
-      }, timeout ?? DEFAULT_TIMEOUT)
+      try {
+        const proc = Bun.spawn([shell, ...shellArgs, command], {
+          cwd: workdir,
+          stdout: "pipe",
+          stderr: "pipe",
+          env: { ...process.env, NO_COLOR: "1" }
+        })
 
-      const [stdout, stderr] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text()
-      ])
-      const exitCode = await proc.exited
-      clearTimeout(timer)
+        let timedOut = false
+        const timer = setTimeout(() => {
+          timedOut = true
+          proc.kill()
+        }, timeout ?? DEFAULT_TIMEOUT)
 
-      const output = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n")
-      const text = [
-        output ? output.slice(0, MAX_OUTPUT) : "(no output)",
-        output.length > MAX_OUTPUT ? "... (output truncated)" : "",
-        `exit code: ${exitCode}${timedOut ? " (timed out)" : ""}`
-      ]
-        .filter(Boolean)
-        .join("\n")
+        const [stdout, stderr] = await Promise.all([
+          new Response(proc.stdout).text(),
+          new Response(proc.stderr).text()
+        ])
+        const exitCode = await proc.exited
+        clearTimeout(timer)
 
-      return {
-        content: [{ type: "text" as const, text }],
-        isError: exitCode !== 0
+        audit({
+          event: "exec",
+          actor: identity.actor,
+          ip: identity.ip,
+          command,
+          cwd: workdir,
+          exitCode,
+          timedOut,
+          durationMs: Date.now() - startedAt
+        })
+
+        const output = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n")
+        const text = [
+          output ? output.slice(0, MAX_OUTPUT) : "(no output)",
+          output.length > MAX_OUTPUT ? "... (output truncated)" : "",
+          `exit code: ${exitCode}${timedOut ? " (timed out)" : ""}`
+        ]
+          .filter(Boolean)
+          .join("\n")
+
+        return {
+          content: [{ type: "text" as const, text }],
+          isError: exitCode !== 0
+        }
+      } catch (error) {
+        audit({
+          event: "exec",
+          actor: identity.actor,
+          ip: identity.ip,
+          command,
+          cwd: workdir,
+          exitCode: -1,
+          error: (error as Error).message,
+          durationMs: Date.now() - startedAt
+        })
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Failed to run command: ${(error as Error).message}`
+            }
+          ],
+          isError: true
+        }
       }
     }
   )

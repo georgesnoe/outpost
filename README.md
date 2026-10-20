@@ -161,6 +161,48 @@ A tunnel makes the endpoint reachable by anyone who has the URL, and every comma
 - localtunnel may answer browser-like visitors with a consent page asking for the tunnel password. Programmatic clients are served directly, but cloudflared is the smoother option for API traffic.
 - Authentication is on the roadmap but not in this release — until it lands, the tunnel URL is your access control.
 
+## Logging & audit trail
+
+Every command is recorded, so you can always answer _who ran what, and when_.
+
+Each entry goes to `outpost.log` as JSON Lines, and to the console in a readable form:
+
+```
+[2026-10-20T16:17:51.694Z] exec actor=Claude (Anthropic) ip=160.79.104.10 command=git status exitCode=0 durationMs=394
+```
+
+```json
+{
+  "ts": "2026-10-20T16:17:51.694Z",
+  "event": "exec",
+  "actor": "Claude (Anthropic)",
+  "ip": "160.79.104.10",
+  "command": "git status",
+  "cwd": "/srv/app",
+  "exitCode": 0,
+  "timedOut": false,
+  "durationMs": 394
+}
+```
+
+The `actor` is resolved from the caller's IP address:
+
+| Caller                            | `actor`              |
+| --------------------------------- | -------------------- |
+| Anthropic / Claude address ranges | `Claude (Anthropic)` |
+| xAI / Grok address ranges         | `Grok (xAI)`         |
+| Anyone else                       | the raw IP address   |
+
+Anthropic publishes its ranges ([source](https://platform.claude.com/docs/en/api/ip-addresses)). xAI does not publish any, so the Grok entries are the edge addresses `api.x.ai` currently resolves to — that match is best effort by nature.
+
+Set `OUTPOST_LOG` to change the log file, or to `off` to keep everything on the console:
+
+```bash
+OUTPOST_LOG=/var/log/outpost.log bun run start
+```
+
+> The caller's address is taken from the usual proxy headers (`cf-connecting-ip`, `x-forwarded-for`, …) when the server runs behind a tunnel, and from the socket otherwise. A client talking to the server directly can set those headers itself, so treat the `actor` as a hint unless the endpoint sits behind a proxy that overwrites them.
+
 ## Security
 
 Outpost hands out shell access. Treat the server as a remote shell.

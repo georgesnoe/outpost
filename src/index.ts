@@ -1,9 +1,12 @@
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server"
 import { registerExecTool } from "./tools/exec.ts"
+import { clientIp, withPeerIp } from "./client.ts"
+import { audit } from "./log.ts"
 
-const handler = createMcpHandler(() => {
-  const mcpServer = new McpServer({ name: "outpost-server", version: "0.1.3" })
-  registerExecTool(mcpServer)
+const handler = createMcpHandler((ctx) => {
+  const mcpServer = new McpServer({ name: "outpost-server", version: "1.0.0" })
+  const request = ctx.requestInfo
+  registerExecTool(mcpServer, { ip: clientIp(request, null) })
   return mcpServer
 })
 
@@ -11,9 +14,12 @@ const httpServer = Bun.serve({
   port: 65432,
   routes: {
     "/mcp": {
-      POST: (req) => handler.fetch(req),
-      GET: (req) => handler.fetch(req),
-      DELETE: (req) => handler.fetch(req)
+      POST: (req, server) =>
+        handler.fetch(withPeerIp(req, server.requestIP(req)?.address ?? null)),
+      GET: (req, server) =>
+        handler.fetch(withPeerIp(req, server.requestIP(req)?.address ?? null)),
+      DELETE: (req, server) =>
+        handler.fetch(withPeerIp(req, server.requestIP(req)?.address ?? null))
     }
   },
   fetch() {
@@ -24,7 +30,16 @@ const httpServer = Bun.serve({
   }
 })
 
+audit({
+  event: "server",
+  actor: "outpost",
+  ip: null,
+  status: "listening",
+  port: httpServer.port
+})
+
 process.on("SIGTERM", () => {
+  audit({ event: "server", actor: "outpost", ip: null, status: "stopping" })
   handler.close()
   httpServer.stop()
 })

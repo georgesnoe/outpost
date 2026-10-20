@@ -40,3 +40,6 @@ outpost-*
 
 # cross-compile target runtimes (bun build --compile --target=...)
 .bun-cache
+
+# audit log
+outpost.log
