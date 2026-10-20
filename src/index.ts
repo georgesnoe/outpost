@@ -2,7 +2,7 @@ import { createMcpHandler, McpServer } from "@modelcontextprotocol/server"
 import { registerExecTool } from "./tools/exec.ts"
 
 const handler = createMcpHandler(() => {
-  const mcpServer = new McpServer({ name: "outpost-server", version: "0.1.2" })
+  const mcpServer = new McpServer({ name: "outpost-server", version: "0.1.3" })
   registerExecTool(mcpServer)
   return mcpServer
 })

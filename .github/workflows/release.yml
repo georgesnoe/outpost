@@ -15,7 +15,7 @@ jobs:
     name: Typecheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -41,7 +41,7 @@ jobs:
           - target: bun-windows-x64
             asset: outpost-windows-x64.exe
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -62,7 +62,7 @@ jobs:
           cp LICENSE README.md dist/
           cd dist
           zip -r "$ASSET.zip" "$ASSET" LICENSE README.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.asset }}
           path: dist/${{ matrix.asset }}.zip
@@ -83,7 +83,7 @@ jobs:
             exit 1
           fi
           echo "Publishing release for $GITHUB_REF_NAME"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
@@ -91,7 +91,7 @@ jobs:
         run: sha256sum dist/*.zip > dist/checksums.txt
       - name: Release notes
         run: |
-          cat > notes.md <<'EOF'
+          cat > "${{ github.workspace }}/notes.md" <<'EOF'
           Standalone builds of Outpost - no runtime required.
 
           | Platform | File |
@@ -109,13 +109,15 @@ jobs:
 
           Checksums for every asset are in `checksums.txt`.
           EOF
-      - name: Publish
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
-        run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/*.zip dist/checksums.txt --clobber
-          else
-            gh release create "$TAG" dist/*.zip dist/checksums.txt --title "$TAG" --notes-file notes.md
-          fi
+      - name: Publish release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body_path: ${{ github.workspace }}/notes.md
+          generate_release_notes: true
+          working_directory: dist
+          files: |
+            *.zip
+            checksums.txt
+          fail_on_unmatched_files: true
