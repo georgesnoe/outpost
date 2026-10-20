@@ -180,4 +180,4 @@ If Outpost is useful to you — or if you want to follow its development — **p
 
 ## License
 
-MIT © 2026 Kossi Georges-NoǸ AHOMBO
+MIT © 2026 Kossi Georges-Noé AHOMBO
