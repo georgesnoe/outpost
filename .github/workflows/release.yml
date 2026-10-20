@@ -71,7 +71,7 @@ jobs:
     name: Publish release
     needs: build
     # Only tagged commits are published: the release is skipped for branches and PRs.
-    if: startsWith(github.ref, "refs/tags/v")
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
