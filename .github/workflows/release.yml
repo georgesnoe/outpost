@@ -1,0 +1,121 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+
+  build:
+    name: Build ${{ matrix.asset }}
+    needs: check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: bun-linux-x64
+            asset: outpost-linux-x64
+          - target: bun-linux-arm64
+            asset: outpost-linux-arm64
+          - target: bun-darwin-x64
+            asset: outpost-macos-x64
+          - target: bun-darwin-arm64
+            asset: outpost-macos-arm64
+          - target: bun-windows-x64
+            asset: outpost-windows-x64.exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build
+        env:
+          TARGET: ${{ matrix.target }}
+          OUTFILE: ${{ matrix.asset }}
+        run: bun run build:target
+      - name: Package
+        env:
+          OUTFILE: ${{ matrix.asset }}
+          ASSET: ${{ matrix.asset }}
+        run: |
+          mkdir -p dist
+          mv "$OUTFILE" "dist/$ASSET"
+          cp LICENSE README.md dist/
+          cd dist
+          zip -r "$ASSET.zip" "$ASSET" LICENSE README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}.zip
+
+  release:
+    name: Publish release
+    needs: build
+    # Only tagged commits are published: the release is skipped for branches and PRs.
+    if: startsWith(github.ref, "refs/tags/v")
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check tag
+        run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "::error::Not a tagged commit - refusing to publish."
+            exit 1
+          fi
+          echo "Publishing release for $GITHUB_REF_NAME"
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: sha256sum dist/*.zip > dist/checksums.txt
+      - name: Release notes
+        run: |
+          cat > notes.md <<'EOF'
+          Standalone builds of Outpost - no runtime required.
+
+          | Platform | File |
+          | --- | --- |
+          | Linux x64 | `outpost-linux-x64.zip` |
+          | Linux arm64 | `outpost-linux-arm64.zip` |
+          | macOS x64 | `outpost-macos-x64.zip` |
+          | macOS arm64 | `outpost-macos-arm64.zip` |
+          | Windows x64 | `outpost-windows-x64.zip` |
+
+          Unzip and run `outpost`. The server listens on port 65432 and serves MCP at `/mcp`.
+
+          macOS: these binaries are unsigned, so Gatekeeper may block the first launch.
+          Run `xattr -d com.apple.quarantine outpost` once, or right-click the app and choose Open.
+
+          Checksums for every asset are in `checksums.txt`.
+          EOF
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.zip dist/checksums.txt --clobber
+          else
+            gh release create "$TAG" dist/*.zip dist/checksums.txt --title "$TAG" --notes-file notes.md
+          fi

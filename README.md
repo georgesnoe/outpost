@@ -78,6 +78,26 @@ bun run build
 
 This produces a single self-contained executable — `outpost` on Linux and macOS, `outpost.exe` on Windows — that runs the server without Bun installed. Copy it to any machine and start it.
 
+To build for a specific platform from any host, use the `build:target` script:
+
+```bash
+TARGET=bun-darwin-arm64 OUTFILE=outpost-macos-arm64 bun run build:target
+```
+
+### Download a prebuilt binary
+
+Every tagged release ships standalone builds for Windows, Linux and macOS — no runtime required:
+
+| Platform    | Asset                     |
+| ----------- | ------------------------- |
+| Linux x64   | `outpost-linux-x64.zip`   |
+| Linux arm64 | `outpost-linux-arm64.zip` |
+| macOS x64   | `outpost-macos-x64.zip`   |
+| macOS arm64 | `outpost-macos-arm64.zip` |
+| Windows x64 | `outpost-windows-x64.zip` |
+
+Grab them from the [releases page](https://github.com/georgesnoe/outpost/releases). macOS binaries are unsigned, so Gatekeeper may block the first launch — run `xattr -d com.apple.quarantine outpost` once, or right-click the app and choose Open.
+
 ## Expose it to an online LLM
 
 Outpost runs on your machine, so a hosted model cannot reach it on its own. Put a tunnel in front of the server to publish the endpoint on the public internet, then give your client the tunnel URL.

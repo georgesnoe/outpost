@@ -36,3 +36,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # build output (bun build --compile)
 outpost
 outpost.exe
+outpost-*
+
+# cross-compile target runtimes (bun build --compile --target=...)
+.bun-cache
