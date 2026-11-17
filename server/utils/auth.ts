@@ -24,7 +24,11 @@ export const auth = betterAuth({
   appName: "Outpost",
   secret: process.env.BETTER_AUTH_SECRET || DEV_SECRET,
   ...(process.env.BETTER_AUTH_URL
-    ? { baseURL: process.env.BETTER_AUTH_URL }
+    ? {
+        baseURL: process.env.BETTER_AUTH_URL,
+        // The browser-based consent flow runs on the public tunnel origin.
+        trustedOrigins: [process.env.BETTER_AUTH_URL],
+      }
     : {}),
   disabledPaths: ["/token"],
   database: drizzleAdapter(db, {

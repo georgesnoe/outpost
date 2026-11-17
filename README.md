@@ -87,7 +87,7 @@ including from the compiled binary.
 
 ## HTTP endpoints
 
-- `/mcp` — MCP endpoint (JSON-RPC; GET/POST/DELETE)
+- `/mcp` — OAuth-protected MCP endpoint (stateless `POST`, MCP 2026-07-28)
 - `/api/auth/*` — Better Auth routes (sign-in, OAuth 2.1, JWKS, etc.)
 - `/sign-in.html` — login page used by the OAuth authorization flow
 - `/consent.html` — consent page for client authorization
@@ -120,7 +120,14 @@ the `mcp` plugin.
 
 ## Notes
 
-- The `/mcp` route is currently open. To require OAuth tokens on it, wrap the
-  MCP handler with `requireMcpAuth` from `@better-auth/mcp`.
+- `BETTER_AUTH_URL` must be the public origin (the cloudflared tunnel URL), not
+  `localhost`. Otherwise the discovery documents advertise a localhost issuer
+  and MCP clients report that they cannot find the OAuth parameters.
+- `MCP_RESOURCE_URL` must match the public `/mcp` URL exactly, including the
+  path, so the `aud` claim and `resource_metadata` challenge point to the same
+  resource.
+- The `/mcp` route is wrapped with `requireMcpAuth` from `@better-auth/mcp`.
+  Unauthenticated requests receive a JSON-RPC 401 with a `WWW-Authenticate`
+  header that points at `/.well-known/oauth-protected-resource/mcp`.
 - Sessions and OAuth state are stored in the same SQLite file under
   `~/.config/outpost`.

@@ -1,5 +1,7 @@
+import { requireMcpAuth } from "@better-auth/mcp";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { defineHandler, HTTPError } from "nitro";
+import { auth, MCP_RESOURCE } from "~/utils/auth";
 import { registerExecTool } from "~/tools/exec";
 import { registerFileTools } from "~/tools/file";
 import { registerMiscTools } from "~/tools/misc";
@@ -8,21 +10,44 @@ import { registerSearchTools } from "~/tools/search";
 import { registerSessionTools } from "~/tools/session";
 import { registerSystemTools } from "~/tools/system";
 
-const handler = createMcpHandler((ctx) => {
-  const mcpServer = new McpServer({ name: "outpost-server", version: "1.0.0" });
-  const request = ctx.requestInfo;
-  const context = { ip: clientIp(request, null) };
+const mcpServerHandler = createMcpHandler(
+  (ctx) => {
+    const mcpServer = new McpServer({
+      name: "outpost-server",
+      version: "1.0.0",
+    });
+    const request = ctx.requestInfo;
+    const context = { ip: clientIp(request, null) };
 
-  registerExecTool(mcpServer, context);
-  registerProcessTools(mcpServer, context);
-  registerFileTools(mcpServer, context);
-  registerSearchTools(mcpServer, context);
-  registerSystemTools(mcpServer, context);
-  registerSessionTools(mcpServer, context);
-  registerMiscTools(mcpServer, context);
+    registerExecTool(mcpServer, context);
+    registerProcessTools(mcpServer, context);
+    registerFileTools(mcpServer, context);
+    registerSearchTools(mcpServer, context);
+    registerSystemTools(mcpServer, context);
+    registerSessionTools(mcpServer, context);
+    registerMiscTools(mcpServer, context);
 
-  return mcpServer;
-});
+    return mcpServer;
+  },
+  {
+    // MCP 2026-07-28 only: no session-oriented legacy protocol.
+    legacy: "reject",
+  },
+);
+
+/**
+ * Verify the OAuth access token on every MCP request. Unauthenticated calls
+ * get a JSON-RPC 401 with a WWW-Authenticate header pointing at the RFC 9728
+ * protected-resource metadata, which is what MCP clients use to discover the
+ * authorization server.
+ */
+const protectedMcp = requireMcpAuth(
+  auth,
+  (request) => mcpServerHandler.fetch(request),
+  {
+    resource: MCP_RESOURCE,
+  },
+);
 
 const FORWARD_HEADERS = [
   "cf-connecting-ip", // Cloudflare tunnels
@@ -83,14 +108,15 @@ export async function withPeerIp(
 }
 
 export default defineHandler(async (event) => {
-  if (/^(GET|POST|DELETE)$/i.test(event.req.method)) {
-    return handler.fetch(await withPeerIp(event.req, event.req.ip ?? null));
+  // MCP 2026-07-28 uses a single stateless POST endpoint.
+  if (!/^POST$/i.test(event.req.method)) {
+    throw new HTTPError(
+      JSON.stringify({
+        statusCode: 405,
+        statusMessage: "Method Not Allowed",
+      }),
+      { status: 405 },
+    );
   }
-  throw new HTTPError(
-    JSON.stringify({
-      statusCode: 405,
-      statusMessage: "Method Not Allowed",
-    }),
-    { status: 405 },
-  );
+  return protectedMcp(await withPeerIp(event.req, event.req.ip ?? null));
 });
