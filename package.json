@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "nitro dev",
     "build": "nitro build",
-    "preview": "nitro preview"
+    "preview": "nitro preview",
+    "format": "prettier write .",
+    "lint": "eslint ."
   },
   "dependencies": {
     "nitro": "^3.0.261103-rc"
