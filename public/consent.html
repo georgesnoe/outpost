@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Authorize · Outpost</title>
+    <style>
+      :root,
+      button,
+      input {
+        color-scheme: light dark;
+        font-family:
+          Rubik,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f5f6f8;
+        color: #1b1f24;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #14171b;
+          color: #e6e9ec;
+        }
+      }
+      .card {
+        width: min(100% - 2rem, 30rem);
+        padding: 2rem;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      }
+      @media (prefers-color-scheme: dark) {
+        .card {
+          background: #1e2228;
+        }
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.5rem;
+      }
+      p.sub {
+        margin: 0 0 1.5rem;
+        opacity: 0.7;
+        font-size: 0.9rem;
+      }
+      dl {
+        margin: 0 0 1.5rem;
+      }
+      dt {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        opacity: 0.6;
+        margin-top: 1rem;
+      }
+      dd {
+        margin: 0.3rem 0 0;
+        word-break: break-all;
+      }
+      .scopes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+      code {
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        background: rgba(127, 127, 127, 0.14);
+        font-size: 0.85rem;
+      }
+      .actions {
+        display: flex;
+        gap: 0.75rem;
+      }
+      button {
+        flex: 1;
+        padding: 0.7rem;
+        border: 0;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      #allow {
+        background: #2f6df6;
+        color: #fff;
+      }
+      #deny {
+        background: transparent;
+        color: inherit;
+        border: 1px solid #cbd0d6;
+      }
+      .error {
+        margin-top: 1rem;
+        color: #c0392b;
+        font-size: 0.9rem;
+        min-height: 1.2em;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Authorize application</h1>
+      <p class="sub">Review the request before granting access.</p>
+      <dl>
+        <dt>Client</dt>
+        <dd id="client">Unknown client</dd>
+        <dt>Requested scopes</dt>
+        <dd class="scopes" id="scopes"></dd>
+      </dl>
+      <div class="actions">
+        <button id="deny" type="button">Deny</button>
+        <button id="allow" type="button">Allow</button>
+      </div>
+      <div id="error" class="error" role="alert"></div>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(
+        window.location.search.replace(/^\?/, ""),
+      );
+      const oauthQuery = params.toString();
+      const errorEl = document.getElementById("error");
+      const allow = document.getElementById("allow");
+      const deny = document.getElementById("deny");
+
+      document.getElementById("client").textContent =
+        params.get("client_id") || "Unknown client";
+      const scopes = params.get("scope") || params.get("scopes") || "";
+      const scopesEl = document.getElementById("scopes");
+      if (scopes) {
+        scopes
+          .split(/\s+/)
+          .filter(Boolean)
+          .forEach((scope) => {
+            const chip = document.createElement("code");
+            chip.textContent = scope;
+            scopesEl.appendChild(chip);
+          });
+      } else {
+        scopesEl.textContent = "Default scopes";
+      }
+
+      async function decide(accept) {
+        errorEl.textContent = "";
+        allow.disabled = deny.disabled = true;
+        try {
+          const res = await fetch("/api/auth/oauth2/consent", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accept, oauth_query: oauthQuery }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok)
+            throw new Error(
+              data.message ||
+                data.error_description ||
+                data.error ||
+                `Request failed (${res.status})`,
+            );
+          if (data.redirect && data.url) window.location.assign(data.url);
+          else window.location.assign("/");
+        } catch (error) {
+          errorEl.textContent = error.message;
+          allow.disabled = deny.disabled = false;
+        }
+      }
+
+      allow.addEventListener("click", () => decide(true));
+      deny.addEventListener("click", () => decide(false));
+    </script>
+  </body>
+</html>

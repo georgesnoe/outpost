@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sign in · Outpost</title>
+    <style>
+      :root,
+      button,
+      input {
+        color-scheme: light dark;
+        font-family:
+          Rubik,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f5f6f8;
+        color: #1b1f24;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #14171b;
+          color: #e6e9ec;
+        }
+      }
+      .card {
+        width: min(100% - 2rem, 26rem);
+        padding: 2rem;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      }
+      @media (prefers-color-scheme: dark) {
+        .card {
+          background: #1e2228;
+        }
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.5rem;
+      }
+      p.sub {
+        margin: 0 0 1.5rem;
+        opacity: 0.7;
+        font-size: 0.9rem;
+      }
+      label {
+        display: block;
+        margin: 0.9rem 0 0.35rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.65rem 0.8rem;
+        border: 1px solid #cbd0d6;
+        border-radius: 8px;
+        font-size: 1rem;
+        background: transparent;
+        color: inherit;
+      }
+      button {
+        width: 100%;
+        margin-top: 1.4rem;
+        padding: 0.7rem;
+        border: 0;
+        border-radius: 8px;
+        background: #2f6df6;
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: Rubik;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      .error {
+        margin-top: 1rem;
+        color: #c0392b;
+        font-size: 0.9rem;
+        min-height: 1.2em;
+      }
+      .hint {
+        margin-top: 1.5rem;
+        font-size: 0.8rem;
+        opacity: 0.6;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Sign in to Outpost</h1>
+      <p class="sub">An application is asking you to authorize access.</p>
+      <form id="form">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="username"
+          required
+          autofocus
+        />
+        <label for="password">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+        <button id="submit" type="submit">Continue</button>
+      </form>
+      <div id="error" class="error" role="alert"></div>
+      <div class="hint">
+        Your session will be used to finish the authorization request.
+      </div>
+    </main>
+
+    <script>
+      const form = document.getElementById("form");
+      const submit = document.getElementById("submit");
+      const errorEl = document.getElementById("error");
+      const oauthQuery = window.location.search.replace(/^\?/, "");
+
+      async function post(path, body) {
+        const res = await fetch(path, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok)
+          throw new Error(
+            data.message ||
+              data.error_description ||
+              data.error ||
+              `Request failed (${res.status})`,
+          );
+        return data;
+      }
+
+      function continueFlow(data) {
+        if (data && data.redirect && data.url) {
+          window.location.assign(data.url);
+          return true;
+        }
+        return false;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorEl.textContent = "";
+        submit.disabled = true;
+        try {
+          const data = await post("/api/auth/sign-in/email", {
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+            oauth_query: oauthQuery,
+          });
+          if (!continueFlow(data)) {
+            // Session created but the flow needs an explicit resume.
+            const resumed = await post("/api/auth/oauth2/continue", {
+              oauth_query: oauthQuery,
+            });
+            if (!continueFlow(resumed)) window.location.assign("/");
+          }
+        } catch (error) {
+          errorEl.textContent = error.message;
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

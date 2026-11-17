@@ -4,3 +4,5 @@ dist
 .output
 .env
 .env.local
+.binary-entry.ts
+*.log

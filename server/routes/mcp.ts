@@ -1,11 +1,26 @@
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { defineHandler, HTTPError } from "nitro";
 import { registerExecTool } from "~/tools/exec";
+import { registerFileTools } from "~/tools/file";
+import { registerMiscTools } from "~/tools/misc";
+import { registerProcessTools } from "~/tools/process";
+import { registerSearchTools } from "~/tools/search";
+import { registerSessionTools } from "~/tools/session";
+import { registerSystemTools } from "~/tools/system";
 
 const handler = createMcpHandler((ctx) => {
   const mcpServer = new McpServer({ name: "outpost-server", version: "1.0.0" });
   const request = ctx.requestInfo;
-  registerExecTool(mcpServer, { ip: clientIp(request, null) });
+  const context = { ip: clientIp(request, null) };
+
+  registerExecTool(mcpServer, context);
+  registerProcessTools(mcpServer, context);
+  registerFileTools(mcpServer, context);
+  registerSearchTools(mcpServer, context);
+  registerSystemTools(mcpServer, context);
+  registerSessionTools(mcpServer, context);
+  registerMiscTools(mcpServer, context);
+
   return mcpServer;
 });
 

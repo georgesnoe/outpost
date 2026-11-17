@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod";
 import { identify } from "~/utils/providers";
 import { audit } from "~/utils/log";
+import { markToolName, recordToolCall } from "~/utils/state";
 import { spawn } from "node:child_process";
 import { text as readStreamText } from "node:stream/consumers";
 
@@ -31,6 +32,7 @@ export type ExecContext = {
 };
 
 export function registerExecTool(server: McpServer, context?: ExecContext) {
+  markToolName("exec");
   server.registerTool(
     "exec",
     {
@@ -120,6 +122,13 @@ export function registerExecTool(server: McpServer, context?: ExecContext) {
           .filter(Boolean)
           .join("\n");
 
+        recordToolCall(
+          "exec",
+          { command, cwd: workdir, timeout },
+          Date.now() - startedAt,
+          resolvedExitCode === 0,
+          identity.ip,
+        );
         return {
           content: [{ type: "text" as const, text: responseText }],
           isError: resolvedExitCode !== 0,
@@ -135,6 +144,13 @@ export function registerExecTool(server: McpServer, context?: ExecContext) {
           error: (error as Error).message,
           durationMs: Date.now() - startedAt,
         });
+        recordToolCall(
+          "exec",
+          { command, cwd: workdir, timeout },
+          Date.now() - startedAt,
+          false,
+          identity.ip,
+        );
         return {
           content: [
             {
