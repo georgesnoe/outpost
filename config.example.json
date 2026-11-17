@@ -1,0 +1,9 @@
+{
+  "$schema": "./config.schema.json",
+  "port": 65432,
+  "secret": "replace-with-a-long-random-secret",
+  "url": "https://outpost.example.com",
+  "dbFileName": "outpost.db",
+  "mcpResourceUrl": "https://outpost.example.com/mcp",
+  "keys": {}
+}

@@ -1,7 +1,6 @@
 import { defineServerEntry } from "nitro";
-
-const port = Number(process.env.PORT ?? process.env.NITRO_PORT ?? 65432);
+import { appConfig } from "~/config";
 
 export default defineServerEntry({
-  port: Number.isFinite(port) ? port : 65432,
+  port: appConfig.port,
 });

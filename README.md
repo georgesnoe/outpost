@@ -21,11 +21,13 @@ providing authentication and an OAuth 2.1 authorization server for MCP clients.
 
 ```bash
 bun install
-cp .env.example .env   # then edit the values
 bun run dev
 ```
 
-The dev server listens on **port 65432** by default.
+On first launch the server creates `~/.config/outpost/config.json` (next to
+`outpost.db`) with default values. An empty `{}` means "use defaults". There is
+no need to create a `.env` file. The dev server listens on **port 65432** by
+default.
 
 ## Scripts
 
@@ -50,11 +52,10 @@ npm run build:binary
 
 The build script:
 
-1. Loads values from `.env` (real environment variables take precedence).
-2. Builds Nitro with the `bun` preset and inlined static assets.
-3. Compiles the server into `dist/outpost` (`.exe` on Windows), baking in the
-   app configuration from `.env` so no `.env`, `node_modules` or `.output`
-   directory is needed at runtime.
+1. Builds Nitro with the `bun` preset and inlined static assets.
+2. Compiles the server into `dist/outpost` (`.exe` on Windows).
+3. Reads configuration at runtime from `~/.config/outpost/config.json`, so
+   no `.env`, `node_modules` or `.output` directory is needed at runtime.
 
 Run it from any directory:
 
@@ -72,15 +73,24 @@ Optional build variables:
 
 ## Configuration
 
-Copy `.env.example` to `.env`. All values are optional:
+Runtime configuration lives in `~/.config/outpost/config.json`, next to the
+SQLite database. It is created automatically as `{}` on first launch; see
+`config.example.json` and `config.schema.json` in the repository for the
+schema and a template.
 
-| Variable             | Default                       | Purpose                                               |
-| -------------------- | ----------------------------- | ----------------------------------------------------- |
-| `PORT`               | `65432`                       | Port the server listens on                            |
-| `DB_FILE_NAME`       | `outpost.db`                  | SQLite filename, resolved under `~/.config/outpost`   |
-| `BETTER_AUTH_SECRET` | development fallback          | Session/token signing secret — set this in production |
-| `BETTER_AUTH_URL`    | inferred from request         | Public base URL used by Better Auth                   |
-| `MCP_RESOURCE_URL`   | `https://api.example.com/mcp` | Canonical MCP protected resource identifier           |
+| Key              | Default                       | Purpose                                               |
+| ---------------- | ----------------------------- | ----------------------------------------------------- |
+| `port`           | `65432`                       | Port the server listens on                            |
+| `secret`         | development fallback          | Session/token signing secret — set this in production |
+| `url`            | `http://localhost:65432`      | Public origin used by Better Auth (the tunnel URL)    |
+| `dbFileName`     | `outpost.db`                  | SQLite filename, resolved inside `~/.config/outpost`  |
+| `mcpResourceUrl` | `https://api.example.com/mcp` | Canonical MCP protected resource identifier           |
+| `keys`           | `{}`                          | Optional application keys/tokens                      |
+
+Environment variables can override individual keys at runtime:
+`PORT`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `DB_FILE_NAME`,
+`MCP_RESOURCE_URL`. A `.env` file is optional and only acts as an override —
+it is never used to create `config.json`.
 
 The database and Better Auth tables are created automatically on first start,
 including from the compiled binary.
@@ -101,6 +111,15 @@ including from the compiled binary.
 directories, searches, system/resources/information, configuration, usage
 statistics, clipboard, notifications, port listing and diffs. All tools adapt
 their implementation to Windows, macOS and Linux.
+
+Desktop automation tools: `mouse_click`, `mouse_move`, `mouse_scroll`,
+`mouse_drag`, `keyboard_type`, `keyboard_press`, `keyboard_hotkey`, `screenshot`,
+`get_screen_info`, `get_active_window`, `get_cursor_position`. Browser tools
+(`browser_navigate`, `browser_get_info`, `browser_get_tabs`,
+`browser_switch_tab`, `browser_click`, `browser_type`, `browser_press`,
+`browser_drag`, `browser_screenshot`, `browser_back`, `browser_forward`) drive
+the **system default browser** through OS-native input APIs. Both screenshot
+tools return a real MCP `ImageContent` block, so the agent can see the image.
 
 > **Warning:** these tools are powerful and are not sandboxed. Do not expose
 > this server to untrusted networks without authentication and access controls.

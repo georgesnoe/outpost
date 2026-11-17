@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://outpost.local/config.schema.json",
+  "title": "Outpost configuration",
+  "description": "Schema for ~/.config/outpost/config.json. All fields are optional; an empty object uses defaults. Environment variables (PORT, BETTER_AUTH_SECRET, BETTER_AUTH_URL, DB_FILE_NAME, MCP_RESOURCE_URL) override these values.",
+  "type": "object",
+  "properties": {
+    "port": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535,
+      "default": 65432,
+      "description": "Port the HTTP server listens on."
+    },
+    "secret": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Better Auth signing secret. Set a long random value."
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Public origin used for OAuth callbacks and discovery (the cloudflared URL)."
+    },
+    "dbFileName": {
+      "type": "string",
+      "minLength": 1,
+      "default": "outpost.db",
+      "description": "SQLite file name, resolved inside ~/.config/outpost."
+    },
+    "mcpResourceUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical MCP protected resource identifier, including the URL path."
+    },
+    "keys": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {},
+      "description": "Optional application keys/tokens."
+    }
+  },
+  "additionalProperties": true
+}

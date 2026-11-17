@@ -9,8 +9,17 @@ export { configBool, configNumber, configString } from "~/utils/state";
 
 export type ToolContext = { ip: string | null };
 
+export type TextContent = { type: "text"; text: string };
+
+/** MCP image block — the agent can actually see this image. */
+export type ImageContent = {
+  type: "image";
+  data: string;
+  mimeType: string;
+};
+
 export type ToolResult = {
-  content: { type: "text"; text: string }[];
+  content: (TextContent | ImageContent)[];
   isError?: boolean;
 };
 
@@ -69,6 +78,14 @@ export function errorResult(error: unknown): ToolResult {
 export function truncate(text: string, max: number): string {
   if (max <= 0 || text.length <= max) return text;
   return `${text.slice(0, max)}\n… (truncated ${text.length - max} chars)`;
+}
+
+/** Result containing a PNG/JPEG screenshot as MCP ImageContent. */
+export function imageResult(
+  base64: string,
+  mimeType = "image/png",
+): ToolResult {
+  return { content: [{ type: "image" as const, data: base64, mimeType }] };
 }
 
 export function jsonResult(data: unknown, maxBytes = 100_000): ToolResult {

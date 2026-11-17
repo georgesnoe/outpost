@@ -1,28 +1,19 @@
-import "dotenv/config";
 import { mkdirSync } from "node:fs";
-import { homedir } from "node:os";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
+import { appConfig, OUTPOST_CONFIG_DIR } from "~/config";
 
-/** Directory used for all Outpost user data, under the current user's home. */
-export const OUTPOST_CONFIG_DIR = join(homedir(), ".config", "outpost");
+export { OUTPOST_CONFIG_DIR };
 
-/** File name used when DB_FILE_NAME is not set. */
-export const DEFAULT_DB_FILE_NAME = "outpost.db";
+/** File name used when the config does not specify one. */
+export const DEFAULT_DB_FILE_NAME = appConfig.dbFileName;
 
 /**
- * Resolve the configured database file name.
- *
- * `DB_FILE_NAME` is normally just a file name and is resolved relative to
- * ~/.config/outpost. An absolute path is honoured as an explicit override,
- * but its file name is still kept inside the config directory when the value
- * would otherwise escape it (e.g. via `..` segments).
+ * Resolve the configured database file name relative to the config directory.
+ * An absolute path is honoured as an explicit override, but `..` segments that
+ * escape the config directory fall back to the file's base name.
  */
 export function resolveDbFileName(value?: string | null): string {
-  const raw = (
-    value ??
-    process.env.DB_FILE_NAME ??
-    DEFAULT_DB_FILE_NAME
-  ).trim();
+  const raw = (value ?? appConfig.dbFileName).trim();
   if (!raw) return join(OUTPOST_CONFIG_DIR, DEFAULT_DB_FILE_NAME);
 
   if (isAbsolute(raw)) return resolve(raw);

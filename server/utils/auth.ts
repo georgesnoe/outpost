@@ -4,32 +4,29 @@ import { jwt } from "better-auth/plugins";
 import { cimd } from "@better-auth/cimd";
 import { fetchClientMetadataResource } from "@better-auth/cimd/node";
 import { mcp } from "@better-auth/mcp";
+import { appConfig } from "~/config";
 import { db } from "~/db";
 import { relations, tables } from "~/db/schema";
 
-const DEV_SECRET = "outpost-development-secret-replace-with-BETTER_AUTH_SECRET";
-
-if (!process.env.BETTER_AUTH_SECRET && process.env.NODE_ENV === "production") {
+if (
+  appConfig.secret.startsWith("outpost-development") &&
+  process.env.NODE_ENV === "production"
+) {
   console.warn(
-    "[auth] BETTER_AUTH_SECRET is not set; set it before deploying.",
+    "[auth] using the development secret; set `secret` in config.json.",
   );
 }
 
 /** Public identifier of this MCP protected resource. */
-export const MCP_RESOURCE =
-  process.env.MCP_RESOURCE_URL ?? "http://api.example.com/mcp";
+export const MCP_RESOURCE = appConfig.mcpResourceUrl;
 
 /** Better Auth instance using the Drizzle SQLite adapter and MCP OAuth provider. */
 export const auth = betterAuth({
   appName: "Outpost",
-  secret: process.env.BETTER_AUTH_SECRET || DEV_SECRET,
-  ...(process.env.BETTER_AUTH_URL
-    ? {
-        baseURL: process.env.BETTER_AUTH_URL,
-        // The browser-based consent flow runs on the public tunnel origin.
-        trustedOrigins: [process.env.BETTER_AUTH_URL],
-      }
-    : {}),
+  secret: appConfig.secret,
+  baseURL: appConfig.url,
+  // The browser-based consent flow runs on the public origin.
+  trustedOrigins: [appConfig.url],
   disabledPaths: ["/token"],
   database: drizzleAdapter(db, {
     provider: "sqlite",

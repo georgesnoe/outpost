@@ -1,6 +1,8 @@
 import { requireMcpAuth } from "@better-auth/mcp";
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { defineHandler, HTTPError } from "nitro";
+import { registerBrowserTools } from "~/tools/browser";
+import { registerGuiTools } from "~/tools/gui";
 import { auth, MCP_RESOURCE } from "~/utils/auth";
 import { registerExecTool } from "~/tools/exec";
 import { registerFileTools } from "~/tools/file";
@@ -26,6 +28,8 @@ const mcpServerHandler = createMcpHandler(
     registerSystemTools(mcpServer, context);
     registerSessionTools(mcpServer, context);
     registerMiscTools(mcpServer, context);
+    registerGuiTools(mcpServer, context);
+    registerBrowserTools(mcpServer, context);
 
     return mcpServer;
   },
