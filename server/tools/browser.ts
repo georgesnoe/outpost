@@ -5,7 +5,7 @@ import {
   IS_WINDOWS,
   IS_MACOS,
   executeTool,
-  imageResult,
+  // imageResult, // used by the commented-out browser_screenshot tool
   jsonResult,
   ok,
   powershell,
@@ -17,10 +17,10 @@ import {
   activeWindow,
   keyboardHotkey,
   keyboardPress,
-  keyboardType,
-  mouseClick,
-  mouseDrag,
-  screenshotBase64,
+  // keyboardType, // used by the commented-out browser_type tool
+  // mouseClick, // used by the commented-out browser_click tool
+  // mouseDrag, // used by the commented-out browser_drag tool
+  // screenshotBase64, // used by the commented-out browser_screenshot tool
 } from "~/tools/gui";
 
 /** Opens a URL with the operating system's default browser. */
@@ -256,6 +256,11 @@ export function registerBrowserTools(
       ),
   );
 
+  /*
+   * DISABLED: these duplicate globally available mouse/keyboard/screenshot
+   * tools. Kept here so they can be re-enabled by removing this comment.
+   * Active browser tools: navigate, info, tabs, back, forward.
+   *
   server.registerTool(
     "browser_switch_tab",
     {
@@ -393,6 +398,7 @@ export function registerBrowserTools(
         context?.ip ?? null,
       ),
   );
+  */
 
   server.registerTool(
     "browser_back",

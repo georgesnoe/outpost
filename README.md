@@ -115,11 +115,13 @@ their implementation to Windows, macOS and Linux.
 Desktop automation tools: `mouse_click`, `mouse_move`, `mouse_scroll`,
 `mouse_drag`, `keyboard_type`, `keyboard_press`, `keyboard_hotkey`, `screenshot`,
 `get_screen_info`, `get_active_window`, `get_cursor_position`. Browser tools
-(`browser_navigate`, `browser_get_info`, `browser_get_tabs`,
-`browser_switch_tab`, `browser_click`, `browser_type`, `browser_press`,
-`browser_drag`, `browser_screenshot`, `browser_back`, `browser_forward`) drive
-the **system default browser** through OS-native input APIs. Both screenshot
-tools return a real MCP `ImageContent` block, so the agent can see the image.
+(`browser_navigate`, `browser_get_info`, `browser_get_tabs`, `browser_back`,
+`browser_forward`) drive the **system default browser** through OS-native
+APIs. The redundant `browser_switch_tab`, `browser_click`, `browser_type`,
+`browser_press`, `browser_drag` and `browser_screenshot` registrations are
+commented out in `server/tools/browser.ts` because global mouse/keyboard and
+screenshot tools cover them. The `screenshot` tool returns a real MCP
+`ImageContent` block, so the agent can see the image.
 
 > **Warning:** these tools are powerful and are not sandboxed. Do not expose
 > this server to untrusted networks without authentication and access controls.
