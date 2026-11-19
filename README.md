@@ -100,6 +100,8 @@ including from the compiled binary.
 - `/mcp` — OAuth-protected MCP endpoint (stateless `POST`, MCP 2026-07-28)
 - `/api/auth/*` — Better Auth routes (sign-in, OAuth 2.1, JWKS, etc.)
 - `/sign-in.html` — login page used by the OAuth authorization flow
+- `/sign-up.html` — account creation page (`prompt=create`); continues the
+  authorization flow automatically after registration
 - `/consent.html` — consent page for client authorization
 - `/.well-known/oauth-protected-resource` — RFC 9728 metadata for MCP clients
 

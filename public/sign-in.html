@@ -4,6 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sign in · Outpost</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root,
       button,
@@ -96,6 +102,13 @@
         opacity: 0.6;
         line-height: 1.5;
       }
+      a {
+        color: #2f6df6;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
@@ -124,7 +137,9 @@
       </form>
       <div id="error" class="error" role="alert"></div>
       <div class="hint">
-        Your session will be used to finish the authorization request.
+        Don't have an account?
+        <a id="sign-up-link" href="/sign-up.html">Create one</a> — the
+        authorization flow will resume automatically.
       </div>
     </main>
 
@@ -133,6 +148,8 @@
       const submit = document.getElementById("submit");
       const errorEl = document.getElementById("error");
       const oauthQuery = window.location.search.replace(/^\?/, "");
+      const signUpLink = document.getElementById("sign-up-link");
+      if (oauthQuery) signUpLink.href = `/sign-up.html?${oauthQuery}`;
 
       async function post(path, body) {
         const res = await fetch(path, {
@@ -170,13 +187,16 @@
             password: document.getElementById("password").value,
             oauth_query: oauthQuery,
           });
-          if (!continueFlow(data)) {
-            // Session created but the flow needs an explicit resume.
+          if (continueFlow(data)) return;
+
+          // Session created but the flow needs an explicit resume.
+          if (oauthQuery) {
             const resumed = await post("/api/auth/oauth2/continue", {
               oauth_query: oauthQuery,
             });
-            if (!continueFlow(resumed)) window.location.assign("/");
+            if (continueFlow(resumed)) return;
           }
+          window.location.assign("/");
         } catch (error) {
           errorEl.textContent = error.message;
         } finally {

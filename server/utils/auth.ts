@@ -40,6 +40,7 @@ export const auth = betterAuth({
     mcp({
       loginPage: "/sign-in.html",
       consentPage: "/consent.html",
+      signup: { page: "/sign-up.html" },
       resource: MCP_RESOURCE,
     }),
     cimd({
